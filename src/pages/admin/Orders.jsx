@@ -16,13 +16,14 @@ const Orders = () => {
       setOrders(data);
     } catch (err) {
       console.error(err);
-      
 
-  console.log("Status:", err.response?.status);
-  console.log("Response:", err.response?.data);
+      console.log("Status:", err.response?.status);
+      console.log("Response:", err.response?.data);
 
-  alert(err.response?.data?.message || "Failed to load orders");
-
+      alert(
+        err.response?.data?.message ||
+          "Failed to load orders"
+      );
     } finally {
       setLoading(false);
     }
@@ -30,14 +31,21 @@ const Orders = () => {
 
   const updateStatus = async (id, status) => {
     try {
-      await API.put(`/orders/${id}/status`, {
-        status,
-      });
+      await API.put(
+        `/orders/${id}/status?status=${encodeURIComponent(status)}`
+      );
 
-      fetchOrders();
+      await fetchOrders();
     } catch (err) {
       console.error(err);
-      alert("Failed to update order");
+
+      console.log("Status:", err.response?.status);
+      console.log("Response:", err.response?.data);
+
+      alert(
+        err.response?.data?.message ||
+          "Failed to update order"
+      );
     }
   };
 
@@ -57,78 +65,118 @@ const Orders = () => {
         Manage Orders
       </h1>
 
-      <div className="bg-white rounded-xl shadow overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-black text-white">
-            <tr>
-              <th className="p-4 text-left">Order ID</th>
-              <th className="p-4 text-left">Customer</th>
-              <th className="p-4 text-left">Amount</th>
-              <th className="p-4 text-left">Status</th>
-              <th className="p-4 text-left">Date</th>
-              <th className="p-4 text-left">Action</th>
-            </tr>
-          </thead>
+      {orders.length === 0 ? (
+        <div className="bg-white rounded-xl shadow p-8">
+          <p className="text-gray-500">
+            No orders found.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-black text-white">
+              <tr>
+                <th className="p-4 text-left">
+                  Order ID
+                </th>
 
-          <tbody>
-            {orders.map((order) => (
-              <tr
-                key={order.orderId}
-                className="border-b"
-              >
-                <td className="p-4">
-                  #{order.orderId.slice(-8)}
-                </td>
+                <th className="p-4 text-left">
+                  Customer
+                </th>
 
-                <td className="p-4">
-                  {order.user?.username || "Unknown"}
-                </td>
+                <th className="p-4 text-left">
+                  Amount
+                </th>
 
-                <td className="p-4">
-                  ₹{order.totalAmount}
-                </td>
+                <th className="p-4 text-left">
+                  Payment
+                </th>
 
-                <td className="p-4 capitalize">
-                  {order.status}
-                </td>
+                <th className="p-4 text-left">
+                  Status
+                </th>
 
-                <td className="p-4">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </td>
+                <th className="p-4 text-left">
+                  Date
+                </th>
 
-                <td className="p-4">
-                  <select
-                    value={order.status}
-                    onChange={(e) =>
-                      updateStatus(
-                        order.orderId,
-                        e.target.value
-                      )
-                    }
-                    className="border rounded px-3 py-2"
-                  >
-                    <option value="pending">
-                      Pending
-                    </option>
-
-                    <option value="shipped">
-                      Shipped
-                    </option>
-
-                    <option value="delivered">
-                      Delivered
-                    </option>
-
-                    <option value="cancelled">
-                      Cancelled
-                    </option>
-                  </select>
-                </td>
+                <th className="p-4 text-left">
+                  Action
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {orders.map((order) => (
+                <tr
+                  key={order.id}
+                  className="border-b"
+                >
+                  <td className="p-4 font-medium">
+                    #{order.id}
+                  </td>
+
+                  <td className="p-4">
+                    {order.fullname || "Unknown"}
+                  </td>
+
+                  <td className="p-4">
+                    ₹
+                    {Number(
+                      order.totalAmount || 0
+                    ).toLocaleString()}
+                  </td>
+
+                  <td className="p-4">
+                    {order.paymentId || "-"}
+                  </td>
+
+                  <td className="p-4 capitalize">
+                    {order.status?.toLowerCase()}
+                  </td>
+
+                  <td className="p-4">
+                    {order.createdAt
+                      ? new Date(
+                          order.createdAt
+                        ).toLocaleDateString()
+                      : "-"}
+                  </td>
+
+                  <td className="p-4">
+                    <select
+                      value={order.status}
+                      onChange={(e) =>
+                        updateStatus(
+                          order.id,
+                          e.target.value
+                        )
+                      }
+                      className="border rounded px-3 py-2"
+                    >
+                      <option value="PLACED">
+                        Placed
+                      </option>
+
+                      <option value="SHIPPED">
+                        Shipped
+                      </option>
+
+                      <option value="DELIVERED">
+                        Delivered
+                      </option>
+
+                      <option value="CANCELLED">
+                        Cancelled
+                      </option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </AdminLayout>
   );
 };

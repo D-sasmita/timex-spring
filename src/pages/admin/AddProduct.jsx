@@ -28,7 +28,8 @@ const AddProduct = () => {
     e.preventDefault();
 
     if (!image) {
-      return alert("Please select an image.");
+      alert("Please select an image.");
+      return;
     }
 
     try {
@@ -43,22 +44,24 @@ const AddProduct = () => {
       data.append("stockQuantity", formData.stockQuantity);
       data.append("image", image);
 
-      await API.post("/products", data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await API.post("/products", data);
 
       alert("Product added successfully.");
 
       navigate("/admin/products");
-    } catch (err) {
-      console.error(err);
 
-      alert(
-        err.response?.data?.message ||
-        "Failed to add product"
-      );
+    } catch (err) {
+      console.error("Add product error:", err);
+
+      if (err.response?.status === 403) {
+        alert("You are not authorized to add products.");
+      } else {
+        alert(
+          err.response?.data?.message ||
+          "Failed to add product"
+        );
+      }
+
     } finally {
       setLoading(false);
     }
@@ -100,6 +103,8 @@ const AddProduct = () => {
           placeholder="Price"
           value={formData.price}
           onChange={handleChange}
+          min="0"
+          step="0.01"
           className="w-full border p-3 rounded"
           required
         />
@@ -120,6 +125,7 @@ const AddProduct = () => {
           placeholder="Stock Quantity"
           value={formData.stockQuantity}
           onChange={handleChange}
+          min="0"
           className="w-full border p-3 rounded"
           required
         />
@@ -133,8 +139,9 @@ const AddProduct = () => {
         />
 
         <button
+          type="submit"
           disabled={loading}
-          className="bg-black text-white px-8 py-3 rounded"
+          className="bg-black text-white px-8 py-3 rounded disabled:opacity-50"
         >
           {loading ? "Adding..." : "Add Product"}
         </button>

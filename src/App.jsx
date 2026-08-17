@@ -10,6 +10,7 @@ import { Sparkles } from "lucide-react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import AIWatchFinder from "./components/AIWatchFinder";
+import AdminRoute from "./components/AdminRoute";
 
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
@@ -41,33 +42,85 @@ function Layout() {
       {!isAdminRoute && <Navbar />}
 
       <Routes>
-        {/* Customer Routes */}
+
+        {/* ==================== CUSTOMER ROUTES ==================== */}
+
         <Route path="/" element={<Home />} />
+
         <Route path="/shop" element={<Shop />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
+
+        <Route
+          path="/product/:id"
+          element={<ProductDetail />}
+        />
+
         <Route path="/cart" element={<Cart />} />
+
         <Route path="/login" element={<Login />} />
+
         <Route path="/signup" element={<Signup />} />
+
         <Route path="/orders" element={<MyOrders />} />
+
         <Route path="/checkout" element={<Checkout />} />
+
         <Route path="/about" element={<About />} />
+
         <Route path="/contact" element={<Contact />} />
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={<Dashboard />} />
-        <Route path="/admin/orders" element={<Orders />} />
-        <Route path="/admin/products" element={<Products />} />
+
+        {/* ==================== ADMIN ROUTES ==================== */}
+
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <Dashboard />
+            </AdminRoute>
+          }
+        />
+
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminRoute>
+              <Orders />
+            </AdminRoute>
+          }
+        />
+
+        <Route
+          path="/admin/products"
+          element={
+            <AdminRoute>
+              <Products />
+            </AdminRoute>
+          }
+        />
+
         <Route
           path="/admin/products/new"
-          element={<AddProduct />}
+          element={
+            <AdminRoute>
+              <AddProduct />
+            </AdminRoute>
+          }
         />
+
         <Route
           path="/admin/products/:id/edit"
-          element={<EditProduct />}
+          element={
+            <AdminRoute>
+              <EditProduct />
+            </AdminRoute>
+          }
         />
+
       </Routes>
 
-      {/* Floating AI Button */}
+
+      {/* ==================== AI WATCH FINDER ==================== */}
+
       {!isAdminRoute && (
         <>
           <button
@@ -89,10 +142,15 @@ function Layout() {
         </>
       )}
 
+
+      {/* ==================== FOOTER ==================== */}
+
       {!isAdminRoute && <Footer />}
+
     </>
   );
 }
+
 
 function App() {
   return (

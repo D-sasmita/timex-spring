@@ -13,25 +13,40 @@ const MyOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await API.get("/orders/myorders");
-      setOrders(res.data);
+      setLoading(true);
+      setError("");
+
+      const { data } = await API.get("/orders/my-orders");
+
+      setOrders(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load orders.");
+      console.error("Failed to load orders:", err);
+
+      setError(
+        err.response?.data?.message ||
+          "Failed to load orders."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "delivered":
         return "bg-green-100 text-green-700";
+
       case "shipped":
         return "bg-blue-100 text-blue-700";
+
       case "cancelled":
         return "bg-red-100 text-red-700";
-      default:
+
+      case "placed":
         return "bg-yellow-100 text-yellow-700";
+
+      default:
+        return "bg-gray-100 text-gray-700";
     }
   };
 
@@ -45,18 +60,31 @@ const MyOrders = () => {
 
   if (error) {
     return (
-      <div className="py-20 text-center text-red-600 text-lg">
-        {error}
+      <div className="py-20 text-center">
+        <p className="text-red-600 text-lg mb-4">
+          {error}
+        </p>
+
+        <button
+          onClick={fetchOrders}
+          className="bg-black text-white px-5 py-2 rounded hover:bg-gray-800"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 min-h-screen">
-      <h1 className="text-4xl font-display mb-10">My Orders</h1>
+
+      <h1 className="text-4xl font-display mb-10">
+        My Orders
+      </h1>
 
       {orders.length === 0 ? (
         <div className="text-center py-20 border rounded-lg shadow-sm">
+
           <p className="text-gray-600 text-lg mb-6">
             You haven't placed any orders yet.
           </p>
@@ -67,29 +95,42 @@ const MyOrders = () => {
           >
             Continue Shopping
           </Link>
+
         </div>
       ) : (
         <div className="space-y-8">
+
           {orders.map((order) => (
+
             <div
-              key={order.orderId}
+              key={order.id}
               className="bg-white border rounded-xl shadow-md p-6"
             >
-              {/* Header */}
+
+              {/* Order Header */}
               <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
+
                 <div>
                   <h2 className="text-2xl font-bold">
-                    Order #{order.orderId.slice(-8)}
+                    Order #{order.id}
                   </h2>
 
                   <p className="text-gray-500 mt-1">
-                    {new Date(order.createdAt).toLocaleDateString()}
+                    {order.createdAt
+                      ? new Date(
+                          order.createdAt
+                        ).toLocaleDateString()
+                      : "Date unavailable"}
                   </p>
                 </div>
 
                 <div className="text-right">
+
                   <p className="text-3xl font-bold">
-                    ₹{Number(order.totalAmount).toFixed(2)}
+                    ₹
+                    {Number(
+                      order.totalAmount || 0
+                    ).toFixed(2)}
                   </p>
 
                   <span
@@ -97,66 +138,122 @@ const MyOrders = () => {
                       order.status
                     )}`}
                   >
-                    {order.status}
+                    {order.status || "Pending"}
                   </span>
+
                 </div>
+
               </div>
 
               {/* Shipping Address */}
               <div className="mb-6">
+
                 <h3 className="text-lg font-semibold mb-3">
                   Shipping Address
                 </h3>
 
                 <div className="text-gray-700 leading-7">
-                  <p className="font-medium">{order.address.fullname}</p>
-                  <p>{order.address.street}</p>
-                  <p>
-                    {order.address.city}, {order.address.state}
+
+                  <p className="font-medium">
+                    {order.fullname || "N/A"}
                   </p>
+
                   <p>
-                    {order.address.postalCode}, {order.address.country}
+                    {order.street || ""}
                   </p>
+
+                  <p>
+                    {order.city || ""}
+                    {order.city && order.state
+                      ? ", "
+                      : ""}
+                    {order.state || ""}
+                  </p>
+
+                  <p>
+                    {order.postalCode || ""}
+                    {order.postalCode &&
+                    order.country
+                      ? ", "
+                      : ""}
+                    {order.country || ""}
+                  </p>
+
                 </div>
+
               </div>
 
-              {/* Items */}
+              {/* Ordered Items */}
               <div className="border-t pt-5">
+
                 <h3 className="text-lg font-semibold mb-4">
-                  Ordered Items ({order.items.length})
+                  Ordered Items (
+                  {order.items?.length || 0})
                 </h3>
 
-                <div className="space-y-3">
-                  {order.items.map((item) => (
-                    <div
-                      key={item.productId?.id || item.productId}
-                      className="flex justify-between items-center border rounded-lg p-3"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {item.productId?.name || "Product"}
-                        </p>
+                {order.items?.length > 0 ? (
 
-                        <p className="text-sm text-gray-500">
-                          Qty: {item.quantity}
-                        </p>
+                  <div className="space-y-3">
 
-                        <p className="text-sm text-gray-500">
-                          ₹{item.price} each
-                        </p>
-                      </div>
+                    {order.items.map((item, index) => {
 
-                      <div className="font-semibold text-lg">
-                        ₹{(item.price * item.quantity).toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      const quantity =
+                        Number(item.quantity || 0);
+
+                      const price =
+                        Number(item.price || 0);
+
+                      return (
+                        <div
+                          key={item.id || index}
+                          className="flex justify-between items-center border rounded-lg p-4"
+                        >
+
+                          <div>
+
+                          <p className="font-medium">
+                               {item.productName || "Product"}
+                          </p>
+
+                            <p className="text-sm text-gray-500">
+                              Qty: {quantity}
+                            </p>
+
+                            <p className="text-sm text-gray-500">
+                              ₹{price.toFixed(2)} each
+                            </p>
+
+                          </div>
+
+                          <div className="font-semibold text-lg">
+                            ₹
+                            {(price * quantity).toFixed(2)}
+                          </div>
+
+                        </div>
+                      );
+
+                    })}
+
+                  </div>
+
+                ) : (
+
+                  <p className="text-gray-500">
+                    No items found for this order.
+                  </p>
+
+                )}
+
               </div>
+
             </div>
+
           ))}
+
         </div>
       )}
+
     </div>
   );
 };

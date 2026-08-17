@@ -6,6 +6,7 @@ import API from "../api/axios";
 
 const Checkout = () => {
   const cartItems = useSelector((state) => state.cart.items);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -15,6 +16,7 @@ const Checkout = () => {
   const [state, setState] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("");
+
   const [loading, setLoading] = useState(false);
 
   const totalPrice = cartItems.reduce(
@@ -23,6 +25,25 @@ const Checkout = () => {
   );
 
   const placeOrder = async () => {
+    // Check cart
+    if (cartItems.length === 0) {
+      alert("Your cart is empty.");
+      return;
+    }
+
+    // Check address fields
+    if (
+      !fullName.trim() ||
+      !shippingAddress.trim() ||
+      !city.trim() ||
+      !state.trim() ||
+      !postalCode.trim() ||
+      !country.trim()
+    ) {
+      alert("Please fill in all delivery details.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -32,30 +53,39 @@ const Checkout = () => {
           quantity: item.qty,
           price: item.price,
         })),
+
         totalAmount: totalPrice,
+
         address: {
           fullname: fullName,
           street: shippingAddress,
-          city,
-          state,
-          postalCode,
-          country,
+          city: city,
+          state: state,
+          postalCode: postalCode,
+          country: country,
         },
+
         paymentId: "COD",
       };
 
-      console.log(payload);
+      console.log("Order Payload:", payload);
 
-      await API.post("/orders", payload);
+      const response = await API.post("/orders", payload);
 
+      console.log("Order Created:", response.data);
+
+      // Clear cart only after successful order
       dispatch(clearCart());
 
+      // Go to orders page
       navigate("/orders");
+
     } catch (err) {
-      console.error(err);
+      console.error("Order Error:", err);
 
       alert(
-        err.response?.data?.message || "Failed to place order"
+        err.response?.data?.message ||
+        "Failed to place order. Please try again."
       );
     } finally {
       setLoading(false);
@@ -64,11 +94,14 @@ const Checkout = () => {
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4">
+
       <h1 className="text-4xl font-display mb-8">
         Checkout
       </h1>
 
+      {/* Delivery Details */}
       <div className="space-y-5">
+
         <input
           type="text"
           placeholder="Full Name"
@@ -117,7 +150,9 @@ const Checkout = () => {
           onChange={(e) => setCountry(e.target.value)}
         />
 
+        {/* Order Summary */}
         <div className="border-t pt-6">
+
           <h2 className="text-2xl mb-4">
             Order Summary
           </h2>
@@ -132,23 +167,27 @@ const Checkout = () => {
               </span>
 
               <span>
-                ₹{item.price * item.qty}
+                ₹{(item.price * item.qty).toLocaleString("en-IN")}
               </span>
             </div>
           ))}
 
           <div className="flex justify-between font-bold text-lg mt-6">
             <span>Total</span>
-            <span>₹{totalPrice}</span>
+
+            <span>
+              ₹{totalPrice.toLocaleString("en-IN")}
+            </span>
           </div>
 
           <button
             onClick={placeOrder}
             disabled={loading || cartItems.length === 0}
-            className="w-full mt-8 bg-black text-white py-3 hover:bg-gray-800 transition"
+            className="w-full mt-8 bg-black text-white py-3 hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Placing Order..." : "Place Order"}
           </button>
+
         </div>
       </div>
     </div>
