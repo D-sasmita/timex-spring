@@ -485,15 +485,4 @@ npm start
 - Cloud deployment (AWS, Render, Railway)
 - Email notifications for order status changes
 
----
 
-## Author
-
-**Sasmita Das**
-B.Tech Computer Engineering
-
----
-
-## License
-
-License information has not been specified.
