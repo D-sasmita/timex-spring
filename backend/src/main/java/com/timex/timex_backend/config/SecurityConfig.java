@@ -1,5 +1,5 @@
 package com.timex.timex_backend.config;
-
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import com.timex.timex_backend.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -151,6 +151,11 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return web -> web.ignoring()
+                .requestMatchers("/images/**");
     }
 
     // =========================
