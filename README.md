@@ -441,7 +441,6 @@ DB_PASSWORD=your_new_password
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-> ⚠️ Note: `logging.level.org.springframework.security=DEBUG` is currently enabled — turn this off before deploying, as it can leak sensitive request/auth details into logs.
 
 ---
 
@@ -477,7 +476,7 @@ npm start
 
 ## Future Improvements
 
-- Payment gateway integration (no `paymentId` generation logic was found beyond the field itself)
+- Payment gateway integration 
 - Wishlist functionality
 - Product reviews and ratings
 - Server-side JSON validation of Gemini's response before returning it to the client
