@@ -13,6 +13,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
+
 @Configuration
 public class SecurityConfig {
 
@@ -29,7 +35,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
 
-                .cors(cors -> {})
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
@@ -38,6 +44,10 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+
+                        // Allow CORS preflight requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**")
+                        .permitAll()
 
                         // =========================
                         // Authentication
@@ -57,37 +67,30 @@ public class SecurityConfig {
                         // =========================
                         // Public Product Operations
                         // =========================
-
-                        // Anyone can view products
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/products/**"
                         )
                         .permitAll()
 
-                        // Product images are public
                         .requestMatchers("/images/**")
                         .permitAll()
 
                         // =========================
                         // Admin Product Operations
                         // =========================
-
-                        // Add product
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/products"
                         )
                         .hasRole("ADMIN")
 
-                        // Update product
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/products/**"
                         )
                         .hasRole("ADMIN")
 
-                        // Delete product
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/products/**"
@@ -97,36 +100,30 @@ public class SecurityConfig {
                         // =========================
                         // Orders
                         // =========================
-
-                        // Create order
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/orders"
                         )
                         .hasAnyRole("USER", "ADMIN")
 
-                        // Logged-in user's orders
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/orders/my-orders"
                         )
                         .hasAnyRole("USER", "ADMIN")
 
-                        // Admin: get all orders
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/orders"
                         )
                         .hasRole("ADMIN")
 
-                        // Get specific order
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/orders/*"
                         )
                         .hasAnyRole("USER", "ADMIN")
 
-                        // Admin: update order status
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/orders/*/status"
@@ -154,6 +151,49 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    // =========================
+    // CORS Configuration
+    // =========================
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(
+                List.of(
+                        "https://timex-frontend-e1ol.onrender.com",
+                        "http://localhost:3000",
+                        "http://localhost:5173"
+                )
+        );
+
+        configuration.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "OPTIONS"
+                )
+        );
+
+        configuration.setAllowedHeaders(
+                List.of(
+                        "Authorization",
+                        "Content-Type"
+                )
+        );
+
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
     }
 
     @Bean
