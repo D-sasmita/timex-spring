@@ -62,13 +62,20 @@ public class OrderController {
 
     // =========================
     // Get Order By ID
+    // Owner or ADMIN only
     // =========================
     @GetMapping("/{id}")
     public ResponseEntity<Order> getOrderById(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
         return ResponseEntity.ok(
-                orderService.getOrderById(id)
+                orderService.getOrderById(id, email, isAdmin)
         );
     }
 

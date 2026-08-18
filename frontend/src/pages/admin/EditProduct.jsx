@@ -35,7 +35,7 @@ const EditProduct = () => {
         stockQuantity: data.stockQuantity || "",
       });
 
-      setPreview(data.imageUrl || "");
+      setPreview(data.imageUrl ? `${process.env.REACT_APP_API_BASE_URL}/images/${data.imageUrl}` : "");
 
     } catch (err) {
       console.error("Fetch product error:", err);

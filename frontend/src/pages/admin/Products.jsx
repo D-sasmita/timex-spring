@@ -90,7 +90,7 @@ const Products = () => {
               >
                 <td className="p-4">
                   <img
-                    src={product.imageUrl}
+                    src={`${process.env.REACT_APP_API_BASE_URL}/images/${product.imageUrl}`}
                     alt={product.name}
                     className="w-16 h-16 object-cover rounded"
                   />

@@ -9,6 +9,7 @@ import com.timex.timex_backend.entity.Product;
 import com.timex.timex_backend.entity.User;
 import com.timex.timex_backend.repository.OrderRepository;
 import com.timex.timex_backend.repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -40,7 +41,6 @@ public class OrderService {
         Order order = new Order();
 
         order.setUser(user);
-        order.setTotalAmount(request.getTotalAmount());
         order.setPaymentId(request.getPaymentId());
         order.setStatus("PLACED");
         order.setCreatedAt(LocalDateTime.now());
@@ -57,26 +57,31 @@ public class OrderService {
             order.setCountry(address.getCountry());
         }
 
-        // Add order items
+        // Add order items — price always comes from the DB, client value is never trusted
+        double computedTotal = 0.0;
+
         for (OrderItemRequest itemRequest : request.getItems()) {
+
+            Product product = productService.getProductById(itemRequest.getProductId());
+
+            if (product == null) {
+                throw new RuntimeException("Product not found: " + itemRequest.getProductId());
+            }
 
             OrderItem item = new OrderItem();
 
             item.setProductId(itemRequest.getProductId());
             item.setQuantity(itemRequest.getQuantity());
-            item.setPrice(itemRequest.getPrice());
-
-            // Set product name
-            Product product =
-                    productService.getProductById(itemRequest.getProductId());
-
-            if (product != null) {
-                item.setProductName(product.getName());
-            }
+            item.setPrice(product.getPrice());   // server-side price, ignore client value
+            item.setProductName(product.getName());
 
             item.setOrder(order);
             order.getItems().add(item);
+
+            computedTotal += product.getPrice() * itemRequest.getQuantity();
         }
+
+        order.setTotalAmount(computedTotal);     // server-side total, ignore client value
 
         return orderRepository.save(order);
     }
@@ -104,8 +109,8 @@ public class OrderService {
         return orders;
     }
 
-    // Get one order by ID
-    public Order getOrderById(Long id) {
+    // Internal lookup, no ownership check — used by admin-only paths
+    private Order findOrderOrThrow(Long id) {
 
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -115,10 +120,22 @@ public class OrderService {
         return order;
     }
 
+    // Get one order by ID, enforcing ownership unless caller is admin
+    public Order getOrderById(Long id, String email, boolean isAdmin) {
+
+        Order order = findOrderOrThrow(id);
+
+        if (!isAdmin && !order.getUser().getEmail().equals(email)) {
+            throw new AccessDeniedException("You do not have permission to view this order");
+        }
+
+        return order;
+    }
+
     // Update order status
     public Order updateStatus(Long id, String status) {
 
-        Order order = getOrderById(id);
+        Order order = findOrderOrThrow(id);
 
         order.setStatus(status);
 

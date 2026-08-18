@@ -71,7 +71,7 @@ const ProductDetail = () => {
         {/* Image */}
         <div className="aspect-square bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden">
           <img
-            src={product.image}
+            src={`${process.env.REACT_APP_API_BASE_URL}/images/${product.imageUrl}`}
             alt={product.name}
             className="w-full h-full object-cover"
           />

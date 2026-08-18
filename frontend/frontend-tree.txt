@@ -1,0 +1,51 @@
+.
+├── frontend-tree.txt
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── public
+│   ├── Black and White Minimalist Watch Store Logo.png
+│   ├── images
+│   │   └── classic.jpeg
+│   └── index.html
+├── README.md
+├── src
+│   ├── api
+│   │   └── axios.js
+│   ├── App.jsx
+│   ├── components
+│   │   ├── AdminLayout.jsx
+│   │   ├── AdminRoute.jsx
+│   │   ├── AdminSidebar.jsx
+│   │   ├── AIWatchFinder.jsx
+│   │   ├── Footer.jsx
+│   │   └── Navbar.jsx
+│   ├── context
+│   │   └── AuthContext.js
+│   ├── index.js
+│   ├── pages
+│   │   ├── About.jsx
+│   │   ├── admin
+│   │   │   ├── AddProduct.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── EditProduct.jsx
+│   │   │   ├── Orders.jsx
+│   │   │   └── Products.jsx
+│   │   ├── Cart.jsx
+│   │   ├── Checkout.jsx
+│   │   ├── Contact.jsx
+│   │   ├── Home.jsx
+│   │   ├── Login.jsx
+│   │   ├── MyOrders.jsx
+│   │   ├── ProductDetail.jsx
+│   │   ├── Shop.jsx
+│   │   └── Signup.jsx
+│   ├── redux
+│   │   ├── cartSlice.js
+│   │   └── store.js
+│   └── styles
+│       ├── global.css
+│       └── navbar.css
+└── tailwind.config.js
+
+11 directories, 38 files

@@ -149,7 +149,7 @@ const Shop = () => {
                   className="block aspect-square bg-gray-50 border border-gray-200 mb-4 overflow-hidden flex items-center justify-center"
                 >
                   <img
-  src={`/images/${product.imageUrl}`}
+  src={`${process.env.REACT_APP_API_BASE_URL}/images/${product.imageUrl}`}
   alt={product.name}
   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
 />

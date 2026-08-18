@@ -43,7 +43,7 @@ const Cart = () => {
             >
               <div className="w-24 h-24 bg-gray-50 border border-gray-200 flex-shrink-0 overflow-hidden">
                 <img
-                  src={item.image}
+                  src={`${process.env.REACT_APP_API_BASE_URL}/images/${item.imageUrl}`}
                   alt={item.name}
                   className="w-full h-full object-cover"
                 />
