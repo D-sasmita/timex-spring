@@ -37,3 +37,4 @@ application-local.properties
 
 # Uploaded product images
 uploads/
+timex_backup.sql
