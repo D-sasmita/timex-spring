@@ -1,24 +1,23 @@
 # TimeX
 
-A full-stack watch e-commerce application with an AI-powered watch recommendation feature. Customers can browse products, manage a cart, checkout, place orders, and track order history. Administrators can manage products and orders and view analytics. The application also includes an **AI Watch Finder** that lets users describe the watch they want in natural language and receive Gemini-powered recommendations.
- 
+A full-stack watch e-commerce app built with React and Spring Boot. Customers can browse the catalog, add items to a cart, check out, and track their orders. Admins manage products and order statuses and get a quick look at sales numbers. There's also an AI Watch Finder: describe what you're looking for in plain language and Gemini picks out matching products for you.
 
 ## Overview
 
-**Customer features:**
-- User registration and login
-- JWT-based authentication
-- Browse products and view product details
-- Shopping cart, checkout, order placement
-- Order history (`/api/orders/my-orders`)
-- AI Watch Finder for natural-language product discovery
+**For customers**
+- Register and log in with JWT auth
+- Browse products and view product detail pages
+- Add to cart and check out (cart state lives in Redux Toolkit)
+- Place orders with a delivery address
+- View your own order history
+- Ask the AI Watch Finder for recommendations in natural language
 
-**Admin features:**
-- Product management (create/update/delete, with image upload)
-- Order management and status updates
-- Analytics dashboard (`/api/analytics`)
+**For admins**
+- Create, edit, and delete products, with image upload
+- View all orders and update their status
+- Check total revenue, orders, products, and users on a simple analytics view
 
-**AI Watch Finder:** users submit a query such as *"Affordable classic watch for daily office use"*. The backend loads the full product catalog, builds a prompt combining the query and product data, sends it to Gemini (`gemini-3.6-flash`), and returns a JSON list of recommended product IDs with short reasons. The frontend matches these IDs back to product data for display.
+**How the AI Watch Finder actually works:** your query and the entire product catalog get bundled into one prompt sent to Gemini, which replies with a short JSON list of matching product IDs and reasons. No embeddings, no vector search, no RAG, just one prompt per request.
 
 ---
 
@@ -26,112 +25,74 @@ A full-stack watch e-commerce application with an AI-powered watch recommendatio
 
 | Layer | Technologies |
 |---|---|
-| Frontend | React 19, Redux Toolkit, React Router 7, Axios, Tailwind CSS, Lucide React |
-| Backend | Java 21, Spring Boot 4.1.0, Spring Web MVC, Spring Data JPA, Spring Security, Maven |
-| Authentication | JWT via `jjwt` (api / impl / jackson, 0.12.6) |
-| Database | MySQL (`mysql-connector-j`) |
-| AI | Google Gemini API via `com.google.genai` SDK (v1.16.0), model `gemini-3.6-flash` |
+| Frontend | React 19.2.8, React Router 7.18.2, Redux Toolkit 2.12.0, Axios 1.19, Tailwind CSS 3.4.19, Lucide React 1.28.0 |
+| Backend | Java 21, Spring Boot 4.1.0 (Web MVC, Data JPA, Security, Validation), Maven |
+| Auth | JWT via `jjwt` 0.12.6 |
+| Database | MySQL, via `mysql-connector-j` |
+| AI | Google Gemini API via the `com.google.genai` SDK 1.16.0, model `gemini-3.6-flash` |
 
 ---
 
-## System Architecture
+## Architecture
 
-```text
-User
- ↓
-React Frontend
- ↓
-Axios / REST API
- ↓
-Spring Boot Backend
- ├── Controllers
- ├── Services
- ├── Security / JWT
- └── Repositories
-      ↓
-   MySQL
+```mermaid
+flowchart TD
+    A[React Frontend] -->|Axios, REST + JWT| B[Spring Boot Backend]
+    B --> C[Spring Security + JwtAuthFilter]
+    C --> D[Controllers]
+    D --> E[Services]
+    E --> F[Repositories]
+    F --> G[(MySQL)]
+    E -->|GeminiService| H[Google Gemini API]
 ```
 
-**AI Watch Finder flow:**
-
-```text
-React
- ↓
-AIController  (POST /api/ai/recommend)
- ↓
-GeminiService
- ↓
-Google Gemini API (gemini-3.6-flash)
- ↓
-JSON recommendation response
- ↓
-React UI
-```
+The React frontend talks to the Spring Boot API over Axios, attaching a JWT to every authenticated request. Each request first passes through a custom `JwtAuthFilter`, then hits a controller, which hands off to a service, which hands off to a repository, which talks to MySQL. The AI Watch Finder is the only feature that steps outside this loop to call an external API.
 
 ---
 
 ## Project Structure
 
-> Backend and frontend structure below are both confirmed from source.
-
-```text
+```
 timex-spring/
 ├── backend/
 │   ├── src/
-│   │   └── main/
-│   │       ├── java/
-│   │       │   └── com/timex/timex_backend/
-│   │       │       ├── config/         # SecurityConfig
-│   │       │       ├── controller/     # AuthController, ProductController, OrderController,
-│   │       │       │                   # AnalyticsController, AIController
-│   │       │       ├── dto/            # RegisterRequest, LoginRequest, AuthResponse, OrderRequest
-│   │       │       ├── entity/         # User, Product, Order, OrderItem
-│   │       │       ├── repository/     # UserRepository, ProductRepository, ...
-│   │       │       ├── security/       # JwtAuthFilter
-│   │       │       └── service/        # ProductService, OrderService, AnalyticsService, GeminiService
-│   │       └── resources/
-│   │           └── application.properties
+│   │   ├── main/
+│   │   │   ├── java/com/timex/timex_backend/
+│   │   │   │   ├── config/         # SecurityConfig, CorsConfig, WebConfig
+│   │   │   │   ├── controller/     # AuthController, ProductController, OrderController,
+│   │   │   │   │                   # AnalyticsController, AIController, TestController
+│   │   │   │   ├── dto/            # RegisterRequest, LoginRequest, AuthResponse,
+│   │   │   │   │                   # OrderRequest, OrderItemRequest, AddressRequest
+│   │   │   │   ├── entity/         # User, Product, Order, OrderItem
+│   │   │   │   ├── repository/     # UserRepository, ProductRepository,
+│   │   │   │   │                   # OrderRepository, OrderItemRepository
+│   │   │   │   ├── security/       # JwtAuthFilter, JwtUtil, CustomUserDetailsService
+│   │   │   │   └── service/        # ProductService, OrderService, AnalyticsService, GeminiService
+│   │   │   └── resources/
+│   │   │       ├── application.properties
+│   │   │       └── static/images/  # pre-seeded product images, served at /images/**
+│   │   └── test/java/.../TimexBackendApplicationTests.java
+│   ├── seed-images/         # sample images used by seed-products.sh
+│   ├── uploads/             # runtime destination for admin-uploaded images
+│   ├── Dockerfile
 │   └── pom.xml
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── api/
-│   │   │   └── axios.js          # configured Axios instance for backend calls
+│   │   ├── api/axios.js            # Axios instance, attaches JWT from localStorage
 │   │   ├── components/
-│   │   │   ├── AdminLayout.jsx
-│   │   │   ├── AdminRoute.jsx    # role-gated route wrapper for /admin/*
-│   │   │   ├── AdminSidebar.jsx
-│   │   │   ├── AIWatchFinder.jsx # AI Watch Finder chat/search panel
-│   │   │   ├── Footer.jsx
-│   │   │   └── Navbar.jsx
-│   │   ├── context/
-│   │   │   └── AuthContext.js    # auth state via React Context (not Redux)
-│   │   ├── pages/
-│   │   │   ├── admin/
-│   │   │   │   ├── AddProduct.jsx
-│   │   │   │   ├── Dashboard.jsx
-│   │   │   │   ├── EditProduct.jsx
-│   │   │   │   ├── Orders.jsx
-│   │   │   │   └── Products.jsx
-│   │   │   ├── About.jsx
-│   │   │   ├── Cart.jsx
-│   │   │   ├── Checkout.jsx
-│   │   │   ├── Contact.jsx
-│   │   │   ├── Home.jsx
-│   │   │   ├── Login.jsx
-│   │   │   ├── MyOrders.jsx
-│   │   │   ├── ProductDetail.jsx
-│   │   │   ├── Shop.jsx
-│   │   │   └── Signup.jsx
-│   │   ├── redux/
-│   │   │   ├── cartSlice.js      # Redux Toolkit is used for cart state only
-│   │   │   └── store.js
-│   │   ├── App.jsx               # routes + layout
-│   │   └── index.js
-│   ├── public/
+│   │   │   ├── AdminLayout.jsx, AdminRoute.jsx, AdminSidebar.jsx
+│   │   │   ├── AIWatchFinder.jsx   # AI Watch Finder overlay panel
+│   │   │   ├── Footer.jsx, Navbar.jsx
+│   │   ├── context/AuthContext.js  # auth state via React Context
+│   │   ├── pages/                  # Home, Shop, ProductDetail, Cart, Checkout, Login,
+│   │   │                           # Signup, MyOrders, About, Contact, admin/*
+│   │   ├── redux/cartSlice.js, store.js   # cart state only
+│   │   ├── styles/global.css
+│   │   └── App.jsx
 │   └── package.json
 │
-└── README.md
+└── seed-products.sh          # curl script to seed two sample products
 ```
 
 ---
@@ -140,272 +101,236 @@ timex-spring/
 
 | Component | Responsibility |
 |---|---|
-| `AuthController` | Handles `/api/auth/register` and `/api/auth/login`. Encodes passwords via `PasswordEncoder`, authenticates via `AuthenticationManager`, and issues a JWT on success. |
-| `ProductController` | CRUD for products under `/api/products`. Create and update accept `multipart/form-data` for image upload. |
-| `OrderController` | Handles order placement, retrieval (own orders and all orders), and status updates. |
-| `AnalyticsController` | Exposes `/api/analytics` — total revenue, orders, products, and users. |
-| `AIController` | Receives a natural-language query at `/api/ai/recommend` and delegates to `GeminiService`. |
-| `GeminiService` | Loads the full product catalog via `ProductRepository`, builds a prompt combining the user's query and product data, calls the Gemini API (`gemini-3.6-flash`), and returns the raw JSON recommendation response. |
-| `ProductService` | Business logic for product retrieval and image-backed create/update/delete. |
-| `OrderService` | Creates orders from `OrderRequest`, looks up orders by user email or by ID, and updates order status. |
-| `AnalyticsService` | Aggregates revenue, order count, product count, and user count. |
-| `UserRepository` | Confirmed methods used: `existsByEmail`, `existsByUsername`, `findByEmail`. |
-| `JwtUtil` | Generates JWTs (`generateToken(email)`); referenced by `AuthController`. Implementation file not yet reviewed. |
-| `SecurityConfig` | Located at `config/SecurityConfig.java`. Defines the full authorization rule set (see below), disables CSRF, enables CORS, sets session policy to `STATELESS`, registers `JwtAuthFilter` before `UsernamePasswordAuthenticationFilter`, and exposes `PasswordEncoder` (`BCryptPasswordEncoder`) and `AuthenticationManager` beans. |
-| `JwtAuthFilter` | Located at `security/JwtAuthFilter.java`. Runs before Spring's standard auth filter to validate the JWT on each request. Internals not yet reviewed. |
-
----
-
-## Authentication & Authorization
-
-```text
-Login
-  ↓
-AuthenticationManager authenticates (email + password)
-  ↓
-JwtUtil generates a token from the user's email
-  ↓
-Frontend receives token in AuthResponse
-  ↓
-Token sent with subsequent API requests
-  ↓
-JWT filter validates token (implementation location unconfirmed)
-  ↓
-Role-based authorization (role stored on User entity: "USER" or "ADMIN")
-  ↓
-Protected resource
-```
-
-Confirmed from `AuthController`:
-- New users are always created with `role = "USER"` and `active = true`.
-- Both register and login return an `AuthResponse` containing `id`, `username`, `email`, `role`, and the JWT.
-
-Confirmed from `SecurityConfig` (`config/SecurityConfig.java`):
-- Stateless sessions (no server-side session state); CSRF disabled; CORS enabled.
-- `JwtAuthFilter` runs before Spring's `UsernamePasswordAuthenticationFilter` on every request.
-- Passwords are hashed with `BCryptPasswordEncoder`.
-- Full authorization rule set — see [API Documentation](#api-documentation) for the per-endpoint access column, all pulled directly from this file.
+| `AuthController` | Handles `/api/auth/register` and `/api/auth/login`. Hashes passwords with `PasswordEncoder`, authenticates via `AuthenticationManager`, and hands back a JWT on success. |
+| `ProductController` | CRUD for `/api/products`. Create and update take `multipart/form-data` so they can accept an image alongside the other fields. |
+| `OrderController` | Order creation, plus retrieval (your own orders, all orders, or one specific order) and status updates. |
+| `AnalyticsController` | One endpoint, `GET /api/analytics`, returning revenue, order count, product count, and user count. |
+| `AIController` | `POST /api/ai/recommend`. Checks the query isn't blank, then passes it to `GeminiService`. |
+| `TestController` | `GET /api/test` and `GET /api/test/protected`, a couple of health-check endpoints. Neither is exempted in `SecurityConfig`, so despite the name, both actually require a logged-in user. |
+| `GeminiService` | Pulls the full product catalog, wraps it and your query into one prompt, calls Gemini, and returns whatever text comes back. |
+| `ProductService` | Product CRUD, plus the image-saving logic: uploaded files get written under `file.upload-dir` with a UUID as the filename. |
+| `OrderService` | Builds orders from `OrderRequest`. Price and total always come from the database, never from what the client sends. Also enforces that a regular user can only see their own orders. |
+| `AnalyticsService` | Adds up revenue, orders, products, and users from the repositories. |
+| `SecurityConfig` | The authorization rules below live here. Also disables CSRF, sets sessions to `STATELESS`, registers the CORS bean, and slots `JwtAuthFilter` in ahead of `UsernamePasswordAuthenticationFilter`. |
+| `JwtAuthFilter` | Reads the `Authorization: Bearer` header, pulls the email out of the token, loads the user through `CustomUserDetailsService`, and sets the security context if everything checks out. |
+| `JwtUtil` | Generates and validates tokens. 24-hour expiry, and the subject of the token is just the user's email. |
+| `CustomUserDetailsService` | Looks up a `User` by email and wraps it as a Spring Security `UserDetails`, with `ROLE_<role>` as the authority. |
 
 ---
 
 ## API Documentation
 
-Endpoints below are copied directly from the controller source.
-
 ### Authentication (`/api/auth`)
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | Public | Register a new user (email + username uniqueness enforced) |
-| POST | `/api/auth/login` | Public | Authenticate with email + password, receive a JWT |
+| POST | `/api/auth/register` | Public | Registers a new user. Email and username both have to be unique, and every new account starts as `USER` |
+| POST | `/api/auth/login` | Public | Logs in with email and password, returns a JWT |
 
 ### Products (`/api/products`)
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/api/products` | Public | List all products |
-| GET | `/api/products/{id}` | Public | Get a single product |
-| POST | `/api/products` | Admin (`hasRole("ADMIN")`) | Create a product — `multipart/form-data`: `name`, `description`, `price`, `category`, `stockQuantity`, `image` |
-| PUT | `/api/products/{id}` | Admin (`hasRole("ADMIN")`) | Update a product — same multipart fields, `image` optional |
-| DELETE | `/api/products/{id}` | Admin (`hasRole("ADMIN")`) | Delete a product |
+| GET | `/api/products` | Public | Lists all products |
+| GET | `/api/products/{id}` | Public | Gets one product |
+| POST | `/api/products` | Admin | Creates a product. `multipart/form-data`: `name`, `description`, `price`, `category`, `stockQuantity`, `image` |
+| PUT | `/api/products/{id}` | Admin | Updates a product, same fields, `image` optional |
+| DELETE | `/api/products/{id}` | Admin | Deletes a product |
 
 ### Orders (`/api/orders`)
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/api/orders` | USER or ADMIN | Create an order for the logged-in user |
-| GET | `/api/orders/my-orders` | USER or ADMIN | Get the logged-in user's own orders |
-| GET | `/api/orders` | Admin (`hasRole("ADMIN")`) | Get all orders |
-| GET | `/api/orders/{id}` | USER or ADMIN | Get a single order by ID |
-| PUT | `/api/orders/{id}/status?status={status}` | Admin (`hasRole("ADMIN")`) | Update an order's status |
+| POST | `/api/orders` | USER or ADMIN | Creates an order for whoever's logged in |
+| GET | `/api/orders/my-orders` | USER or ADMIN | Your own orders |
+| GET | `/api/orders` | Admin | Every order |
+| GET | `/api/orders/{id}` | USER or ADMIN | One order. If it isn't yours and you're not an admin, you get a 403 |
+| PUT | `/api/orders/{id}/status?status={status}` | Admin | Updates an order's status |
 
 ### Analytics
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/api/analytics` | Admin (`hasRole("ADMIN")`, matched via `/api/analytics/**`) | Returns `totalRevenue`, `totalOrders`, `totalProducts`, `totalUsers` |
+| GET | `/api/analytics` | Admin | Returns `totalRevenue`, `totalOrders`, `totalProducts`, `totalUsers` |
 
 ### AI
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/api/ai/recommend` | Public (explicitly `permitAll()`) | Body: `{ "query": "<natural language description>" }`. Returns a JSON string of recommendations. |
+| POST | `/api/ai/recommend` | Public | Body: `{ "query": "..." }`. A blank query gets you a `400` with `{"recommendations":[]}`; otherwise you get `200` and Gemini's raw JSON |
 
-**Example request:**
-```json
-POST /api/ai/recommend
-{
-  "query": "Affordable classic watch for daily office use"
-}
-```
+### Diagnostics
 
-**Example response** (shape enforced by the Gemini prompt in `GeminiService`):
-```json
-{
-  "recommendations": [
-    {
-      "productId": 1,
-      "reason": "Short explanation why this product matches the customer's request."
-    }
-  ]
-}
-```
-Recommendations are capped at 3 products; `productId` must match an existing product; an empty array is returned if nothing matches or the query is blank.
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/api/test` | Authenticated | Returns a plain confirmation string |
+| GET | `/api/test/protected` | Authenticated | Same thing |
 
 ---
 
-## Database Design
+## Authentication & Authorization
 
-Entities confirmed from `entity/` source.
-
-```text
-User
- │  (user_id FK on Order)
- └── Order
-      │  (order_id FK on OrderItem)
-      └── OrderItem  ──(productId, no JPA relation)──▶ Product
+```
+Login
+  |
+AuthenticationManager checks email + password
+  |
+JwtUtil.generateToken(email) -> JWT, 24h expiry, subject = email
+  |
+Frontend stores the response (id, username, email, role, token) in localStorage
+  |
+Axios interceptor adds "Authorization: Bearer <token>" to every request
+  |
+JwtAuthFilter pulls the token apart, validates it, loads the user
+  |
+Security context now holds ROLE_<role> (USER or ADMIN)
+  |
+authorizeHttpRequests() in SecurityConfig decides what you're allowed to touch
 ```
 
-| Entity | Key fields |
-|---|---|
-| `User` | `id`, `username` (unique), `email` (unique), `password` (hashed), `role` (default `"USER"`), `active` (default `true`) |
-| `Product` | `id`, `name`, `price`, `description`, `category`, `stockQuantity`, `imageUrl` |
-| `Order` | `id`, `totalAmount`, `status`, `paymentId`, `createdAt`, `fullname`, `street`, `city`, `state`, `postalCode`, `country`, `user` (`@ManyToOne`), `items` (`@OneToMany`, cascade `ALL`, `orphanRemoval = true`) |
-| `OrderItem` | `id`, `productId` (plain `Long`, **not** a JPA relation), `quantity`, `price`, `productName` (`@Transient`), `order` (`@ManyToOne`) |
+Your role comes from the `User.role` column in the database, not from the token itself. The JWT only ever carries your email, so the role gets checked fresh on every single request.
 
-**Relationships:**
-- **User → Order**: one-to-many. `Order.user` is `@ManyToOne` with `@JoinColumn(name = "user_id")`, marked `@JsonIgnore` to avoid serializing the user in order responses.
-- **Order → OrderItem**: one-to-many, cascade `ALL` with `orphanRemoval = true` — deleting an order removes its items.
-- **OrderItem → Product**: *not* a JPA relationship. `OrderItem` only stores the raw `productId` (and a transient, non-persisted `productName`) rather than a `@ManyToOne Product` reference.
+Public: `/api/auth/**`, `POST /api/ai/recommend`, `GET /api/products/**`, `/images/**`.
+USER or ADMIN: creating an order, viewing your own orders, viewing a single order.
+ADMIN only: writing to products, listing every order, updating order status, `/api/analytics/**`.
+Anything not covered above, including `/api/test` and `/api/test/protected`, just needs you to be logged in.
 
 ---
 
 ## AI Watch Finder
 
-**Example input:**
-```text
-"Affordable classic watch for daily office use"
+**How a request flows through the system:**
+
+```
+You type a query into the AIWatchFinder overlay
+  -> POST /api/ai/recommend { "query": "..." }
+  -> AIController makes sure the query isn't blank
+  -> GeminiService.getRecommendation(query)
+       - pulls every product via ProductRepository.findAll()
+       - builds a text block: id, name, price, category, description, stock for each one
+       - drops that into a fixed prompt telling Gemini to:
+           - only recommend from what's listed
+           - cap it at 3 products
+           - keep each reason under 30 words
+           - respond with nothing but {"recommendations":[{productId, reason}]}
+           - return an empty array if nothing's a good fit
+  -> calls Gemini (gemini-3.6-flash) and passes response.text() straight through
+  -> frontend matches each productId against the products it already loaded and renders a card
 ```
 
-**Processing flow:**
+There's no parsing or validation of what Gemini sends back, `GeminiService` just returns the raw text. If the model ever ignores the "JSON only" instruction, that malformed response goes straight to the frontend as-is.
 
-```text
-User Query
-    ↓
-React AIWatchFinder overlay (components/AIWatchFinder.jsx)
-    ↓
-POST /api/ai/recommend  { "query": "..." }
-    ↓
-AIController
-    ↓
-GeminiService — loads all products via ProductRepository,
-                builds a prompt, calls Gemini
-    ↓
-Google Gemini API (model: gemini-3.6-flash)
-    ↓
-JSON: { "recommendations": [{ productId, reason }] }
-    ↓
-Frontend matches productId → full product data
-    ↓
-Recommendation Cards
-```
-
-**Component roles (confirmed from `GeminiService.java`):**
-
-| Component | Role |
-|---|---|
-| `AIController` | Validates the incoming query isn't blank; returns `{"recommendations":[]}` if it is. Otherwise passes the query to `GeminiService`. |
-| `GeminiService` | Fetches every product via `ProductRepository.findAll()`. If none exist, returns an empty result immediately. Otherwise builds a text block of all product data (ID, name, price, category, description, stock) and embeds it in a fixed instruction prompt. |
-| Prompt contract | Instructs Gemini to recommend **only** from the listed products, cap results at 3, keep each reason under 30 words, return **only** valid JSON in the exact `{"recommendations":[{productId, reason}]}` shape, and return an empty array if nothing matches well. |
-| Google Gemini API | Called via the `com.google.genai.Client`, model `gemini-3.6-flash`. The raw `response.text()` is returned directly as the controller's response body. |
-| `ProductRepository` | Supplies the full, current product catalog used to ground every recommendation. |
-
-This implementation sends the **entire product catalog** in the prompt on every request — it does not use RAG, embeddings, a vector database, agents, or fine-tuning.
-
-> Note: since `GeminiService` returns Gemini's raw text directly, output correctness depends entirely on the model actually following the "JSON only" instruction — there's no server-side JSON validation/parsing visible in this controller.
+One thing worth flagging: the product image inside the AI Watch Finder's recommendation cards is just `<img src={product.imageUrl} />`, no base URL prefix. Every other page (`Shop`, `ProductDetail`, `Cart`, the admin product pages) builds the image URL as `${REACT_APP_API_BASE_URL}/images/${product.imageUrl}`. The AI Watch Finder skips that step, so the bare filename resolves against the frontend's own origin instead of the backend, and the image won't actually load.
 
 ---
 
-## Frontend Architecture
+## Product Images
 
-**Routing** (confirmed from `App.jsx`, via React Router 7):
+New images get saved by `ProductService.saveImage()` into whatever directory `file.upload-dir` points to (`./uploads`), under a random UUID filename. Only that filename is stored on `Product.imageUrl`, never a full path.
 
-| Route | Page | Notes |
-|---|---|---|
-| `/` | `Home` | |
-| `/shop` | `Shop` | Product listing |
-| `/product/:id` | `ProductDetail` | |
-| `/cart` | `Cart` | |
-| `/login` | `Login` | |
-| `/signup` | `Signup` | |
-| `/orders` | `MyOrders` | Logged-in user's order history |
-| `/checkout` | `Checkout` | |
-| `/about` | `About` | |
-| `/contact` | `Contact` | |
-| `/admin` | `admin/Dashboard` | Wrapped in `AdminRoute` |
-| `/admin/orders` | `admin/Orders` | Wrapped in `AdminRoute` |
-| `/admin/products` | `admin/Products` | Wrapped in `AdminRoute` |
-| `/admin/products/new` | `admin/AddProduct` | Wrapped in `AdminRoute` |
-| `/admin/products/:id/edit` | `admin/EditProduct` | Wrapped in `AdminRoute` |
+`SecurityConfig` opens up `/images/**` to everyone and excludes it from the security filter chain entirely. But there's no `addResourceHandler` anywhere mapping `./uploads` to that URL path, `WebConfig` is just an empty class. What's actually serving `/images/**` is Spring Boot's default handling of `src/main/resources/static/`, where the 14 pre-seeded product images live.
 
-**Layout behavior:**
-- `Navbar` and `Footer` render on all non-admin routes; hidden on any path starting with `/admin`.
-- A floating "Ask AI" button (bottom-right, hidden on admin routes) opens the `AIWatchFinder` panel as an overlay rather than a dedicated page/route.
-- `AdminRoute` gates every `/admin/*` route — the actual redirect/permission-check logic lives inside that component (not yet reviewed).
+So the pre-seeded images work fine, since they're sitting in `static/images/`. But anything an admin uploads afterward goes to `./uploads`, a completely different directory that nothing maps to `/images/**`. Those images probably won't load at the URL the frontend expects once you're running this somewhere other than locally with everything freshly built. This is a real gap in the code, not something I'm guessing at.
 
-**State management:**
-- **React Context** (`AuthContext.js`) handles authentication state — login/logout, current user, token — not Redux.
-- **Redux Toolkit** (`redux/store.js`, `redux/cartSlice.js`) is used specifically for cart state.
+On the frontend, most pages build the full image URL as `${process.env.REACT_APP_API_BASE_URL}/images/${product.imageUrl}`, except the AI Watch Finder (see above).
 
-**API layer:** `api/axios.js` provides a configured Axios instance for all backend calls; the JWT from `AuthContext` is presumably attached to protected requests (interceptor logic not yet reviewed).
+---
 
+## Database Design
 
+```mermaid
+erDiagram
+    USER ||--o{ ORDER : places
+    ORDER ||--o{ ORDER_ITEM : contains
 
+    USER {
+        Long id PK
+        String username
+        String email
+        String password
+        String role
+        boolean active
+    }
+    ORDER {
+        Long id PK
+        Double totalAmount
+        String status
+        String paymentId
+        LocalDateTime createdAt
+        String fullname
+        String street
+        String city
+        String state
+        String postalCode
+        String country
+        Long user_id FK
+    }
+    ORDER_ITEM {
+        Long id PK
+        Long productId
+        Integer quantity
+        Double price
+        Long order_id FK
+    }
+    PRODUCT {
+        Long id PK
+        String name
+        double price
+        String description
+        String category
+        int stockQuantity
+        String imageUrl
+    }
+```
 
-## Installation & Setup
+| Entity | Key fields |
+|---|---|
+| `User` | `id`, `username` (unique), `email` (unique), `password` (hashed), `role` (defaults to `USER`), `active` (defaults to `true`) |
+| `Product` | `id`, `name`, `price`, `description`, `category`, `stockQuantity`, `imageUrl` (just a filename) |
+| `Order` | `id`, `totalAmount`, `status`, `paymentId`, `createdAt`, the address fields (`fullname`, `street`, `city`, `state`, `postalCode`, `country`), `user` (`@ManyToOne`), `items` (`@OneToMany`, cascade `ALL`, `orphanRemoval = true`) |
+| `OrderItem` | `id`, `productId` (a plain `Long`, not a JPA relation), `quantity`, `price`, `productName` (`@Transient`), `order` (`@ManyToOne`) |
 
-### Prerequisites
+**How they relate:**
+- A `User` has many `Order`s. `Order.user` is `@ManyToOne` and marked `@JsonIgnore`, so the user object never shows up when an order gets serialized.
+- An `Order` has many `OrderItem`s, cascade `ALL` with `orphanRemoval = true`. Delete an order, its items go with it.
+- `OrderItem` doesn't actually have a JPA relation to `Product`, it just stores the raw `productId`. The `productName` field is `@Transient`, `OrderService.populateProductNames()` fills it in at read time by looking the product up again. It's never saved to the database.
+- Price and total are always computed server-side from the current `Product.price` at the moment you place the order. Whatever price the client sends gets ignored.
 
-- Java 21
-- Node.js and npm
-- MySQL
-- Maven wrapper confirmed present in `backend/` (`mvnw`, `mvnw.cmd`, `.mvn/`)
+---
 
-### Clone Repository
+## Docker
+
+`backend/Dockerfile` is a two-stage build:
+
+```dockerfile
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /app
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
+COPY src src
+RUN chmod +x mvnw
+RUN ./mvnw clean package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+CMD ["java", "-jar", "app.jar"]
+```
+
+First stage builds the jar with `eclipse-temurin:21-jdk`, tests skipped. Second stage copies just the jar into a leaner `eclipse-temurin:21-jre` image and exposes port `8080`. There's no `docker-compose.yml` here, just the one Dockerfile for the backend. The frontend isn't containerized at all.
 
 ```bash
-git clone <repository-url>
-cd timex-spring
-```
-
-### Database Setup
-
-```sql
-CREATE DATABASE timex_db;
-```
-
-Confirmed connection string from `application.properties`:
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/timex_db
-spring.datasource.username=root
-```
-
-### Backend Setup
-
-```bash
+# Build
 cd backend
-./mvnw spring-boot:run
-```
+docker build -t timex-backend .
 
-### Frontend Setup
-
-```bash
-cd frontend
-npm install
-echo "PORT=3001" >> .env
-npm start
+# Run
+docker run -p 8080:8080 \
+  -e DB_PASSWORD=your_db_password \
+  -e GEMINI_API_KEY=your_gemini_api_key \
+  timex-backend
 ```
-The backend's `CorsConfig` only allows requests from `http://localhost:3001`, so the frontend must run on port `3001`, not the Create React App default of `3000`. Adding `PORT=3001` to a `.env` file in `frontend/` makes `npm start` use that port automatically going forward.
 
 ---
 
@@ -413,75 +338,107 @@ The backend's `CorsConfig` only allows requests from `http://localhost:3001`, so
 
 | Variable | Purpose |
 |---|---|
-| `DB_PASSWORD` | MySQL password (referenced as `${DB_PASSWORD}` in `application.properties`) |
-| `GEMINI_API_KEY` | API key for the Google Gemini API (referenced as `${GEMINI_API_KEY}`, injected into `GeminiService` via `@Value("${gemini.api.key}")`) |
-| `PORT` (frontend) | Set to `3001` in `frontend/.env` so the React dev server matches the origin allowed by the backend's `CorsConfig` |
+| `DB_PASSWORD` | MySQL password, read as `${DB_PASSWORD}` in `application.properties` |
+| `GEMINI_API_KEY` | Gemini API key, injected into `GeminiService` via `@Value("${gemini.api.key}")` |
+| `REACT_APP_API_BASE_URL` (frontend) | Builds product image URLs on most pages. There's no `.env` committed, so you'll need to set this yourself wherever you build or run the frontend |
 
-Confirmed settings in `application.properties`:
+Here's `application.properties` with secrets stripped out:
+
 ```properties
 spring.application.name=timex-backend
-spring.datasource.url=jdbc:mysql://localhost:3306/timex_db
-spring.datasource.username=root
+spring.datasource.url=jdbc:mysql://timex-mysql-timex03.f.aivencloud.com:17046/defaultdb?ssl-mode=REQUIRED
+spring.datasource.username=avnadmin
 spring.datasource.password=${DB_PASSWORD}
 spring.jpa.hibernate.ddl-auto=update
 file.upload-dir=./uploads
-logging.level.org.springframework.security=DEBUG
 gemini.api.key=${GEMINI_API_KEY}
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
 ```
 
-Set the variables in your shell before running the backend:
-```bash
-export DB_PASSWORD="your_new_password"
-export GEMINI_API_KEY="your_gemini_api_key"
-```
+The datasource already points at a hosted Aiven MySQL instance, not localhost, so `DB_PASSWORD` and `GEMINI_API_KEY` are really the only two secrets you have to supply yourself.
 
-Or in a local `.env` (not committed):
-```env
-DB_PASSWORD=your_new_password
-GEMINI_API_KEY=your_gemini_api_key
-```
-
+Worth knowing: the JWT signing key in `JwtUtil` is hardcoded right in the source (`SECRET = "timexSpringSecretKeyChangeThisInProductionMinimum256Bits123456"`), with a comment saying it should come from configuration instead. It doesn't yet. Anyone who can read this repo has the key that signs every token issued by the app.
 
 ---
 
-## Running the Application
+## CORS
 
-**Terminal 1 — Backend:**
+There are two CORS configs in this codebase, and they disagree with each other:
+
+- `SecurityConfig.corsConfigurationSource()`, wired into the Spring Security filter chain, allows `https://timex-frontend-e1ol.onrender.com`, `http://localhost:3000`, and `http://localhost:5173`.
+- `CorsConfig.java`, a separate `WebMvcConfigurer` bean applied to `/api/**`, allows only `http://localhost:3001`.
+
+Since protected requests hit the Security filter chain first, the `SecurityConfig` origins are the ones that actually matter for most `/api/**` traffic. `CorsConfig.java` still pointing at `localhost:3001` looks like it's left over from an earlier version of the frontend, it doesn't match the app's current default dev port of `3000` (confirmed from `package.json`'s `react-scripts start`).
+
+---
+
+## Local Development Setup
+
+### Prerequisites
+- Java 21
+- Node.js and npm
+- A MySQL database (the committed config points at a hosted Aiven instance, but you can swap in a local one)
+- The Maven wrapper is already in `backend/` (`mvnw`, `mvnw.cmd`, `.mvn/`)
+
+### Clone
+
+```bash
+git clone https://github.com/D-sasmita/timex-spring.git
+cd timex-spring
+```
+
+### Backend
+
 ```bash
 cd backend
+export DB_PASSWORD="your_db_password"
+export GEMINI_API_KEY="your_gemini_api_key"
 ./mvnw spring-boot:run
 ```
 
-**Terminal 2 — Frontend:**
+Runs on port `8080` by default, there's no `server.port` override.
+
+### Frontend
+
 ```bash
 cd frontend
+npm install
 npm start
 ```
 
-> Backend runs on Spring Boot's default port `8080` (no `server.port` override is set). Frontend runs on port `3001` (set via `frontend/.env`, since `CorsConfig` only allows `http://localhost:3001` — see [Environment Variables](#environment-variables)), not Create React App's default of `3000`.
+Two things to fix first if you want it talking to a local backend:
+
+1. `src/api/axios.js` has the API base URL hardcoded to `https://timex-spring.onrender.com/api`, with a commented-out `http://localhost:8080/api` line sitting right above it. Swap which one's active.
+2. Set `REACT_APP_API_BASE_URL=http://localhost:8080` (a local `.env` file works fine, it's already gitignored) so product images actually load.
+
+CRA's default port is `3000`, which is already an allowed CORS origin, so you don't need to mess with the port.
+
+### Seeding sample products (optional)
+
+`seed-products.sh` at the repo root posts two sample products through curl, using images from `backend/seed-images/`. Open it up and drop in a real admin JWT from `/api/auth/login` where the placeholder `TOKEN` is, then run it.
+
+```bash
+./seed-products.sh
+```
 
 ---
 
-## Security Notes
+## Production Deployment
 
-- **JWT authentication**: tokens are generated in `AuthController`/`JwtUtil` from the user's email after successful login or registration.
-- **Password hashing**: `AuthController` encodes passwords via Spring Security's `PasswordEncoder` before saving — plaintext passwords are not stored.
-- **Role-based authorization**: enforced in `SecurityConfig` via `hasRole("ADMIN")` / `hasAnyRole("USER", "ADMIN")` per endpoint. Product writes, all-orders view, order status updates, and analytics are ADMIN-only; order creation/viewing is open to any authenticated USER or ADMIN; product browsing, auth, and the AI recommender are public.
-- **Environment variables**: `application.properties` references `${DB_PASSWORD}` and `${GEMINI_API_KEY}` — no hardcoded fallback values remain in the file. The exposed dev password was rotated after the earlier hardcoded value was found in git history.
-- **API key protection**: the Gemini API key is only used server-side inside `GeminiService` and is never sent to the frontend.
-- **CORS**: configured in `CorsConfig` — only `http://localhost:3001` is allowed to call `/api/**`, with `GET`/`POST`/`PUT`/`DELETE`/`OPTIONS` and credentials enabled. The frontend is configured to run on port `3001` to match (see [Frontend Setup](#installation--setup)). Update `allowedOrigins` to the real deployed frontend URL before deploying to production.
-- **Debug logging**: Spring Security debug logging is currently enabled in `application.properties` — disable for production.
+- Backend: on Render, at `https://timex-spring.onrender.com` (API base `https://timex-spring.onrender.com/api`)
+- Frontend: on Render, at `https://timex-frontend-e1ol.onrender.com` 
+- Database: hosted MySQL on Aiven Cloud
+---
+
+
+d.
 
 ---
+
 
 ## Future Improvements
 
-- Payment gateway integration 
-- Wishlist functionality
-- Product reviews and ratings
-- Server-side JSON validation of Gemini's response before returning it to the client
-- Docker-based deployment
-- Cloud deployment (AWS, Render, Railway)
-- Email notifications for order status changes
-
-
+- Payment gateway integration
+- Wishlist and product review/rating functionality
+- Email notifications on order status changes
