@@ -1,6 +1,6 @@
 # TimeX
 
-A full-stack watch e-commerce app built with React and Spring Boot. Customers can browse the catalog, add items to a cart, check out, and track their orders. Admins manage products and order statuses and get a quick look at sales numbers. There's also an AI Watch Finder: describe what you're looking for in plain language and Gemini picks out matching products for you.
+A full-stack watch e-commerce app built with React and Spring Boot. Customers can browse the catalog, add items to a cart, check out, and track their orders. Admins manage products and order statuses and get a quick look at sales numbers. There's also an AI Watch Finder: describe what you're looking for in natural language and Gemini picks out matching products for you.
 
 ## Overview
 
@@ -25,9 +25,9 @@ A full-stack watch e-commerce app built with React and Spring Boot. Customers ca
 
 | Layer | Technologies |
 |---|---|
-| Frontend | React 19.2.8, React Router 7.18.2, Redux Toolkit 2.12.0, Axios 1.19, Tailwind CSS 3.4.19, Lucide React 1.28.0 |
+| Frontend | React , React Router , Redux Toolkit , Axios , Tailwind CSS , Lucide React  |
 | Backend | Java 21, Spring Boot 4.1.0 (Web MVC, Data JPA, Security, Validation), Maven |
-| Auth | JWT via `jjwt` 0.12.6 |
+| Auth | JWT via `jjwt`  |
 | Database | MySQL, via `mysql-connector-j` |
 | AI | Google Gemini API via the `com.google.genai` SDK 1.16.0, model `gemini-3.6-flash` |
 
@@ -218,21 +218,11 @@ You type a query into the AIWatchFinder overlay
   -> frontend matches each productId against the products it already loaded and renders a card
 ```
 
-There's no parsing or validation of what Gemini sends back, `GeminiService` just returns the raw text. If the model ever ignores the "JSON only" instruction, that malformed response goes straight to the frontend as-is.
-
-One thing worth flagging: the product image inside the AI Watch Finder's recommendation cards is just `<img src={product.imageUrl} />`, no base URL prefix. Every other page (`Shop`, `ProductDetail`, `Cart`, the admin product pages) builds the image URL as `${REACT_APP_API_BASE_URL}/images/${product.imageUrl}`. The AI Watch Finder skips that step, so the bare filename resolves against the frontend's own origin instead of the backend, and the image won't actually load.
-
 ---
 
 ## Product Images
 
-New images get saved by `ProductService.saveImage()` into whatever directory `file.upload-dir` points to (`./uploads`), under a random UUID filename. Only that filename is stored on `Product.imageUrl`, never a full path.
-
-`SecurityConfig` opens up `/images/**` to everyone and excludes it from the security filter chain entirely. But there's no `addResourceHandler` anywhere mapping `./uploads` to that URL path, `WebConfig` is just an empty class. What's actually serving `/images/**` is Spring Boot's default handling of `src/main/resources/static/`, where the 14 pre-seeded product images live.
-
-So the pre-seeded images work fine, since they're sitting in `static/images/`. But anything an admin uploads afterward goes to `./uploads`, a completely different directory that nothing maps to `/images/**`. Those images probably won't load at the URL the frontend expects once you're running this somewhere other than locally with everything freshly built. This is a real gap in the code, not something I'm guessing at.
-
-On the frontend, most pages build the full image URL as `${process.env.REACT_APP_API_BASE_URL}/images/${product.imageUrl}`, except the AI Watch Finder (see above).
+New images get saved by `ProductService.saveImage()` into whatever directory `file.upload-dir` points to (`./uploads`), under a random UUID filename. Only that filename is stored on `Product.imageUrl`.
 
 ---
 
@@ -318,7 +308,7 @@ EXPOSE 8080
 CMD ["java", "-jar", "app.jar"]
 ```
 
-First stage builds the jar with `eclipse-temurin:21-jdk`, tests skipped. Second stage copies just the jar into a leaner `eclipse-temurin:21-jre` image and exposes port `8080`. There's no `docker-compose.yml` here, just the one Dockerfile for the backend. The frontend isn't containerized at all.
+First stage builds the jar with `eclipse-temurin:21-jdk`, tests skipped. Second stage copies just the jar into a leaner `eclipse-temurin:21-jre` image and exposes port `8080`. 
 
 ```bash
 # Build
@@ -342,7 +332,7 @@ docker run -p 8080:8080 \
 | `GEMINI_API_KEY` | Gemini API key, injected into `GeminiService` via `@Value("${gemini.api.key}")` |
 | `REACT_APP_API_BASE_URL` (frontend) | Builds product image URLs on most pages. There's no `.env` committed, so you'll need to set this yourself wherever you build or run the frontend |
 
-Here's `application.properties` with secrets stripped out:
+Here's `application.properties` :
 
 ```properties
 spring.application.name=timex-backend
@@ -358,19 +348,6 @@ spring.servlet.multipart.max-request-size=10MB
 
 The datasource already points at a hosted Aiven MySQL instance, not localhost, so `DB_PASSWORD` and `GEMINI_API_KEY` are really the only two secrets you have to supply yourself.
 
-Worth knowing: the JWT signing key in `JwtUtil` is hardcoded right in the source (`SECRET = "timexSpringSecretKeyChangeThisInProductionMinimum256Bits123456"`), with a comment saying it should come from configuration instead. It doesn't yet. Anyone who can read this repo has the key that signs every token issued by the app.
-
----
-
-## CORS
-
-There are two CORS configs in this codebase, and they disagree with each other:
-
-- `SecurityConfig.corsConfigurationSource()`, wired into the Spring Security filter chain, allows `https://timex-frontend-e1ol.onrender.com`, `http://localhost:3000`, and `http://localhost:5173`.
-- `CorsConfig.java`, a separate `WebMvcConfigurer` bean applied to `/api/**`, allows only `http://localhost:3001`.
-
-Since protected requests hit the Security filter chain first, the `SecurityConfig` origins are the ones that actually matter for most `/api/**` traffic. `CorsConfig.java` still pointing at `localhost:3001` looks like it's left over from an earlier version of the frontend, it doesn't match the app's current default dev port of `3000` (confirmed from `package.json`'s `react-scripts start`).
-
 ---
 
 ## Local Development Setup
@@ -378,7 +355,7 @@ Since protected requests hit the Security filter chain first, the `SecurityConfi
 ### Prerequisites
 - Java 21
 - Node.js and npm
-- A MySQL database (the committed config points at a hosted Aiven instance, but you can swap in a local one)
+- A MySQL database 
 - The Maven wrapper is already in `backend/` (`mvnw`, `mvnw.cmd`, `.mvn/`)
 
 ### Clone
@@ -397,7 +374,7 @@ export GEMINI_API_KEY="your_gemini_api_key"
 ./mvnw spring-boot:run
 ```
 
-Runs on port `8080` by default, there's no `server.port` override.
+Runs on port `8080` by default.
 
 ### Frontend
 
@@ -433,10 +410,6 @@ CRA's default port is `3000`, which is already an allowed CORS origin, so you do
 
 
 d.
-
----
-
-
 ## Future Improvements
 
 - Payment gateway integration
