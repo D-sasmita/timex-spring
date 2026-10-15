@@ -37,7 +37,6 @@ public class GeminiService {
         StringBuilder productData = new StringBuilder();
 
         for (Product product : products) {
-
             productData.append("""
                     Product ID: %d
                     Name: %s
@@ -87,13 +86,67 @@ public class GeminiService {
                 - If no product matches reasonably well, return an empty recommendations array.
                 """.formatted(query, productData);
 
-        GenerateContentResponse response =
-                client.models.generateContent(
-                        "gemini-3.6-flash",
-                        prompt,
-                        null
-                );
+        int maxAttempts = 3;
 
-        return response.text();
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                GenerateContentResponse response =
+                        client.models.generateContent(
+                                "gemini-3.8-flash",
+                                prompt,
+                                null
+                        );
+
+                String result = response.text();
+
+                if (result == null || result.isBlank()) {
+                    throw new IllegalStateException(
+                            "Gemini returned an empty response."
+                    );
+                }
+
+                return result;
+
+            } catch (RuntimeException ex) {
+
+                if (!isTemporaryError(ex) || attempt == maxAttempts) {
+                    throw ex;
+                }
+
+                try {
+                    // Wait 1 second before attempt 2, then 2 seconds before attempt 3.
+                    Thread.sleep(1000L * attempt);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(
+                            "Gemini retry was interrupted.",
+                            interrupted
+                    );
+                }
+            }
+        }
+
+        throw new IllegalStateException(
+                "Unable to get AI recommendations after retries."
+        );
+    }
+
+    private boolean isTemporaryError(RuntimeException ex) {
+        String message = ex.getMessage();
+
+        if (message == null) {
+            return false;
+        }
+
+        String error = message.toLowerCase();
+
+        return error.contains("503")
+                || error.contains("429")
+                || error.contains("500")
+                || error.contains("502")
+                || error.contains("504")
+                || error.contains("high demand")
+                || error.contains("temporarily unavailable")
+                || error.contains("resource exhausted");
     }
 }

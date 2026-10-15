@@ -1,21 +1,52 @@
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { removeFromCart, increaseQty, decreaseQty } from "../redux/cartSlice";
+import {
+  updateCartQuantity,
+  deleteCartItem,
+} from "../redux/cartSlice";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 
 const Cart = () => {
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.items);
+  const loading = useSelector((state) => state.cart.loading);
+  const error = useSelector((state) => state.cart.error);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const shipping = subtotal > 0 ? 0 : 0;
-  const total = subtotal + shipping;
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + Number(item.price) * item.qty,
+    0
+  );
+
+  const changeQuantity = async (item, quantity) => {
+    if (quantity < 1) return;
+
+    try {
+      await dispatch(
+        updateCartQuantity({
+          productId: item.id,
+          quantity,
+        })
+      ).unwrap();
+    } catch (err) {
+      alert(typeof err === "string" ? err : "Failed to update quantity.");
+    }
+  };
+
+  const removeItem = async (itemId) => {
+    try {
+      await dispatch(deleteCartItem(itemId)).unwrap();
+    } catch (err) {
+      alert(typeof err === "string" ? err : "Failed to remove item.");
+    }
+  };
 
   if (cartItems.length === 0) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <ShoppingBag className="h-12 w-12 mx-auto text-brand-gray mb-4" />
-        <h1 className="font-display text-3xl text-brand-black mb-2">Your cart is empty</h1>
+        <h1 className="font-display text-3xl text-brand-black mb-2">
+          Your cart is empty
+        </h1>
         <p className="text-brand-gray font-sans mb-8">
           Looks like you haven't added a watch yet.
         </p>
@@ -31,10 +62,17 @@ const Cart = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="font-display text-4xl text-brand-black mb-10">Your Cart</h1>
+      <h1 className="font-display text-4xl text-brand-black mb-10">
+        Your Cart
+      </h1>
+
+      {error && (
+        <p className="mb-4 text-sm text-red-600">
+          {typeof error === "string" ? error : "Something went wrong with your cart."}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Cart items */}
         <div className="lg:col-span-2 space-y-6">
           {cartItems.map((item) => (
             <div
@@ -51,25 +89,33 @@ const Cart = () => {
 
               <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h3 className="font-display text-lg text-brand-black">{item.name}</h3>
+                  <h3 className="font-display text-lg text-brand-black">
+                    {item.name}
+                  </h3>
                   <p className="text-sm text-brand-gray font-sans">
-                    ₹{item.price?.toLocaleString("en-IN")} each
+                    ₹{Number(item.price).toLocaleString("en-IN")} each
                   </p>
                 </div>
 
                 <div className="flex items-center gap-4">
                   <div className="flex items-center border border-gray-300">
                     <button
-                      onClick={() => dispatch(decreaseQty(item.id))}
-                      className="p-2 hover:bg-gray-100"
+                      onClick={() => changeQuantity(item, item.qty - 1)}
+                      disabled={loading || item.qty <= 1}
+                      className="p-2 hover:bg-gray-100 disabled:opacity-40"
                       aria-label="Decrease quantity"
                     >
                       <Minus className="h-3 w-3" />
                     </button>
-                    <span className="w-8 text-center text-sm font-sans">{item.qty}</span>
+
+                    <span className="w-8 text-center text-sm font-sans">
+                      {item.qty}
+                    </span>
+
                     <button
-                      onClick={() => dispatch(increaseQty(item.id))}
-                      className="p-2 hover:bg-gray-100"
+                      onClick={() => changeQuantity(item, item.qty + 1)}
+                      disabled={loading}
+                      className="p-2 hover:bg-gray-100 disabled:opacity-40"
                       aria-label="Increase quantity"
                     >
                       <Plus className="h-3 w-3" />
@@ -77,12 +123,13 @@ const Cart = () => {
                   </div>
 
                   <p className="font-sans text-brand-black w-20 text-right">
-                    ₹{(item.price * item.qty).toLocaleString("en-IN")}
+                    ₹{(Number(item.price) * item.qty).toLocaleString("en-IN")}
                   </p>
 
                   <button
-                    onClick={() => dispatch(removeFromCart(item.id))}
-                    className="text-brand-gray hover:text-red-600 transition-colors"
+                    onClick={() => removeItem(item.id)}
+                    disabled={loading}
+                    className="text-brand-gray hover:text-red-600 transition-colors disabled:opacity-40"
                     aria-label={`Remove ${item.name} from cart`}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -93,10 +140,11 @@ const Cart = () => {
           ))}
         </div>
 
-        {/* Order summary */}
         <div className="lg:col-span-1">
           <div className="border border-gray-200 p-6 sticky top-24">
-            <h2 className="font-display text-xl text-brand-black mb-4">Order Summary</h2>
+            <h2 className="font-display text-xl text-brand-black mb-4">
+              Order Summary
+            </h2>
 
             <div className="space-y-2 text-sm font-sans text-brand-gray mb-4">
               <div className="flex justify-between">
@@ -111,14 +159,15 @@ const Cart = () => {
 
             <div className="flex justify-between font-sans text-brand-black text-lg border-t border-gray-200 pt-4 mb-6">
               <span>Total</span>
-              <span>₹{total.toLocaleString("en-IN")}</span>
+              <span>₹{subtotal.toLocaleString("en-IN")}</span>
             </div>
 
-           <Link
-    to="/checkout"
-    className="block w-full text-center bg-black text-white py-3">
-    Proceed to Checkout
-</Link>
+            <Link
+              to="/checkout"
+              className="block w-full text-center bg-black text-white py-3 hover:bg-brand-brass transition-colors"
+            >
+              Proceed to Checkout
+            </Link>
 
             <Link
               to="/shop"

@@ -13,3 +13,4 @@ backend/uploads/
 # Environment files
 *.env
 .env
+seed-products.sh

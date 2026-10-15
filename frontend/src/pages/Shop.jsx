@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { addToCart } from "../redux/cartSlice";
+import { addCartItem } from "../redux/cartSlice";
 import API from "../api/axios";
 import { ShoppingBag } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -17,14 +18,13 @@ const Shop = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [addingProductId, setAddingProductId] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-
         const res = await API.get("/products");
-
         setProducts(res.data);
         setError(null);
       } catch (err) {
@@ -43,18 +43,35 @@ const Shop = () => {
       product.category === activeCategory;
 
     const matchesSearch =
-      product.name
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      product.description
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesCategory && matchesSearch;
   });
 
-  const handleAddToCart = (product) => {
-    dispatch(addToCart(product));
+  const handleAddToCart = async (product) => {
+    const storedUser = localStorage.getItem("timexUser");
+
+    if (!storedUser) {
+      alert("Please log in to add watches to your cart.");
+      return;
+    }
+
+    try {
+      setAddingProductId(product.id);
+
+      await dispatch(addCartItem(product)).unwrap();
+
+      alert(`${product.name} added to your cart.`);
+    } catch (err) {
+      alert(
+        typeof err === "string"
+          ? err
+          : "Unable to add this watch. Please try again."
+      );
+    } finally {
+      setAddingProductId(null);
+    }
   };
 
   const clearSearch = () => {
@@ -63,8 +80,6 @@ const Shop = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-
-      {/* Header */}
       <div className="mb-10 text-center">
         <p className="text-xs uppercase tracking-[0.3em] text-brand-brass font-sans font-medium mb-2">
           Full Collection
@@ -84,7 +99,6 @@ const Shop = () => {
         )}
       </div>
 
-      {/* Category filter */}
       <div className="flex justify-center gap-6 mb-10 border-b border-gray-200 pb-4">
         {CATEGORIES.map((cat) => (
           <button
@@ -101,21 +115,18 @@ const Shop = () => {
         ))}
       </div>
 
-      {/* Loading */}
       {loading && (
         <p className="text-center text-brand-gray font-sans py-16">
           Loading watches...
         </p>
       )}
 
-      {/* Error */}
       {error && (
         <p className="text-center text-red-600 font-sans py-16">
           {error}
         </p>
       )}
 
-      {/* No products found */}
       {!loading && !error && filteredProducts.length === 0 && (
         <div className="text-center py-16">
           <p className="text-brand-gray font-sans">
@@ -135,53 +146,51 @@ const Shop = () => {
         </div>
       )}
 
-      {/* Product grid */}
-      {!loading &&
-        !error &&
-        filteredProducts.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="group">
+      {!loading && !error && filteredProducts.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredProducts.map((product) => (
+            <div key={product.id} className="group">
+              <Link
+                to={`/product/${product.id}`}
+                className="block aspect-square bg-gray-50 border border-gray-200 mb-4 overflow-hidden flex items-center justify-center"
+              >
+                <img
+                  src={`${process.env.REACT_APP_API_BASE_URL}/images/${product.imageUrl}`}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </Link>
 
-                {/* Product Image */}
-                <Link
-                  to={`/product/${product.id}`}
-                  className="block aspect-square bg-gray-50 border border-gray-200 mb-4 overflow-hidden flex items-center justify-center"
-                >
-                  <img
-  src={`${process.env.REACT_APP_API_BASE_URL}/images/${product.imageUrl}`}
-  alt={product.name}
-  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-/>
-                </Link>
+              <div className="flex items-start justify-between">
+                <div>
+                  <Link to={`/product/${product.id}`}>
+                    <h3 className="font-display text-xl text-brand-black hover:text-brand-brass transition-colors">
+                      {product.name}
+                    </h3>
+                  </Link>
 
-                {/* Product Info */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Link to={`/product/${product.id}`}>
-                      <h3 className="font-display text-xl text-brand-black hover:text-brand-brass transition-colors">
-                        {product.name}
-                      </h3>
-                    </Link>
-
-                    <p className="text-sm text-brand-gray font-sans mt-1">
-                      ₹{product.price?.toLocaleString("en-IN")}
-                    </p>
-                  </div>
-
-                  {/* Add to Cart */}
-                  <button
-                    onClick={() => handleAddToCart(product)}
-                    className="mt-1 p-2 border border-brand-black hover:bg-brand-black hover:text-white transition-colors"
-                    aria-label={`Add ${product.name} to cart`}
-                  >
-                    <ShoppingBag className="h-4 w-4" />
-                  </button>
+                  <p className="text-sm text-brand-gray font-sans mt-1">
+                    ₹{product.price?.toLocaleString("en-IN")}
+                  </p>
                 </div>
+
+                <button
+                  onClick={() => handleAddToCart(product)}
+                  disabled={addingProductId === product.id}
+                  className="mt-1 p-2 border border-brand-black hover:bg-brand-black hover:text-white transition-colors disabled:opacity-50"
+                  aria-label={`Add ${product.name} to cart`}
+                >
+                  {addingProductId === product.id ? (
+                    <span className="text-xs">...</span>
+                  ) : (
+                    <ShoppingBag className="h-4 w-4" />
+                  )}
+                </button>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

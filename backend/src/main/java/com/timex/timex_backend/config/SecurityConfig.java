@@ -170,6 +170,7 @@ public class SecurityConfig {
                 List.of(
                         "https://timex-frontend-e1ol.onrender.com",
                         "http://localhost:3000",
+                          "http://localhost:3001",
                         "http://localhost:5173"
                 )
         );
