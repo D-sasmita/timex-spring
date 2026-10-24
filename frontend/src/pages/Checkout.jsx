@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { clearCart } from "../redux/cartSlice";
+import { fetchCart } from "../redux/cartSlice";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
@@ -47,14 +47,12 @@ const Checkout = () => {
     try {
       setLoading(true);
 
+      // The server recalculates price and total from the database.
       const payload = {
         items: cartItems.map((item) => ({
           productId: item.id,
           quantity: item.qty,
-          price: item.price,
         })),
-
-        totalAmount: totalPrice,
 
         address: {
           fullname: fullName,
@@ -68,14 +66,10 @@ const Checkout = () => {
         paymentId: "COD",
       };
 
-      console.log("Order Payload:", payload);
+      await API.post("/orders", payload);
 
-      const response = await API.post("/orders", payload);
-
-      console.log("Order Created:", response.data);
-
-      // Clear cart only after successful order
-      dispatch(clearCart());
+      // The server already removed the ordered items. Reload the cart.
+      dispatch(fetchCart());
 
       // Go to orders page
       navigate("/orders");

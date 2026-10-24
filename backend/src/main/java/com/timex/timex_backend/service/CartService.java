@@ -20,6 +20,8 @@ import java.util.List;
 @Service
 public class CartService {
 
+    private static final int MAX_QTY_PER_PRODUCT = 10;
+
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
@@ -89,8 +91,11 @@ public class CartService {
                 .findFirst()
                 .orElse(null);
 
+        int newTotal = (existingItem != null ? existingItem.getQuantity() : 0) + quantity;
+        checkQuantity(product, newTotal);
+
         if (existingItem != null) {
-            existingItem.setQuantity(existingItem.getQuantity() + quantity);
+            existingItem.setQuantity(newTotal);
         } else {
             CartItem item = new CartItem();
             item.setProduct(product);
@@ -123,6 +128,7 @@ public class CartService {
                         "Product is not in your cart"
                 ));
 
+        checkQuantity(item.getProduct(), quantity);
         item.setQuantity(quantity);
         cartRepository.save(cart);
 
@@ -149,6 +155,21 @@ public class CartService {
         cartRepository.save(cart);
 
         return getCart(authentication);
+    }
+
+    // Cart quantity must be 1 to 10 and not above the stock on hand
+    private void checkQuantity(Product product, int totalQuantity) {
+        if (totalQuantity > MAX_QTY_PER_PRODUCT) {
+            throw new IllegalArgumentException(
+                    "You can order at most " + MAX_QTY_PER_PRODUCT + " units of one product");
+        }
+
+        if (totalQuantity > product.getStockQuantity()) {
+            throw new IllegalArgumentException(
+                    product.getStockQuantity() == 0
+                            ? product.getName() + " is out of stock"
+                            : "Only " + product.getStockQuantity() + " left of " + product.getName());
+        }
     }
 
     private CartItemResponse toResponse(CartItem item) {

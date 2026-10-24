@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { X, Sparkles, ShoppingBag } from "lucide-react";
 import { useDispatch } from "react-redux";
-import { addToCart } from "../redux/cartSlice";
+import { addCartItem } from "../redux/cartSlice";
 import API from "../api/axios";
 
 const AIWatchFinder = ({ isOpen, onClose }) => {
@@ -55,8 +55,21 @@ useEffect(() => {
     return products.find((product) => product.id === productId);
   };
 
-  const handleAddToCart = (product) => {
-    dispatch(addToCart(product));
+  const handleAddToCart = async (product) => {
+    if (!localStorage.getItem("timexUser")) {
+      alert("Please log in to add watches to your cart.");
+      return;
+    }
+
+    try {
+      await dispatch(addCartItem(product)).unwrap();
+    } catch (err) {
+      alert(
+        typeof err === "string"
+          ? err
+          : "Unable to add this watch. Please try again."
+      );
+    }
   };
 
   if (!isOpen) {

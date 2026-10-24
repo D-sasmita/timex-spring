@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { addToCart } from "../redux/cartSlice";
+import { addCartItem } from "../redux/cartSlice";
 import { ShoppingBag, Minus, Plus, ChevronLeft } from "lucide-react";
 import API from "../api/axios";
 
@@ -30,12 +30,23 @@ const ProductDetail = () => {
     fetchProduct();
   }, [id]);
 
-  const handleAddToCart = () => {
-    for (let i = 0; i < qty; i++) {
-      dispatch(addToCart(product));
+  const handleAddToCart = async () => {
+    if (!localStorage.getItem("timexUser")) {
+      alert("Please log in to add watches to your cart.");
+      return;
     }
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+
+    try {
+      await dispatch(addCartItem({ ...product, quantity: qty })).unwrap();
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+    } catch (err) {
+      alert(
+        typeof err === "string"
+          ? err
+          : "Unable to add this watch. Please try again."
+      );
+    }
   };
 
   if (loading) {

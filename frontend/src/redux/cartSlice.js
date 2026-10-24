@@ -17,14 +17,14 @@ export const fetchCart = createAsyncThunk(
   }
 );
 
-// Add one unit of a product to the database cart.
+// Add a product to the database cart (1 unit, or product.quantity if given).
 export const addCartItem = createAsyncThunk(
   "cart/addCartItem",
   async (product, { rejectWithValue }) => {
     try {
       const response = await API.post("/cart/items", {
         productId: product.id,
-        quantity: 1,
+        quantity: product.quantity || 1,
       });
       return response.data;
     } catch (error) {
