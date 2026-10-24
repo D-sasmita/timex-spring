@@ -70,7 +70,7 @@ const cartSlice = createSlice({
 
   initialState: {
     items: [],
-    loading: false,
+    loading: !!localStorage.getItem("timexUser"),
     error: null,
   },
 

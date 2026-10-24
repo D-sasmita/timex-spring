@@ -40,6 +40,14 @@ const Cart = () => {
     }
   };
 
+  if (loading && cartItems.length === 0) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+        <p className="text-brand-gray font-sans">Loading your cart...</p>
+      </div>
+    );
+  }
+
   if (cartItems.length === 0) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
